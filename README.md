@@ -52,6 +52,8 @@ make clean
 
 ## Usage Example
 
+### I2C Example
+
 ```cpp
 #include "BME280.hpp"
 #include "LinuxI2CBus.hpp"
@@ -59,6 +61,24 @@ make clean
 int main() {
     LinuxI2CBus i2c("/dev/i2c-1");
     BME280 sensor(i2c, 0x76);
+
+    if (sensor.begin()) {
+        float temperature, pressure;
+        sensor.readSensor(temperature, pressure);
+    }
+    return 0;
+}
+```
+
+### SPI Example
+
+```cpp
+#include "BME280.hpp"
+#include "LinuxSPIBus.hpp"
+
+int main() {
+    LinuxSPIBus spi("/dev/spidev0.0");
+    BME280 sensor(spi);
 
     if (sensor.begin()) {
         float temperature, pressure;
