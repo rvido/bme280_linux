@@ -22,10 +22,11 @@ int main(int argc, char** argv) {
                 return 1;
             }
             while (true) {
-                float temp, pres;
-                sensor.readSensor(temp, pres);
+                float temp, pres, hum;
+                sensor.readSensor(temp, pres, hum);
                 std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
-                          << "Pressure: " << pres << " hPa" << std::endl;
+                          << "Pressure: " << pres << " hPa, "
+                          << "Humidity: " << hum << " %RH" << std::endl;
                 sleep(1);
             }
         } catch (const std::exception& e) {
@@ -42,10 +43,11 @@ int main(int argc, char** argv) {
         }
 
         while (true) {
-            float temp, pres;
-            sensor.readSensor(temp, pres);
+            float temp, pres, hum;
+            sensor.readSensor(temp, pres, hum);
             std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
-                      << "Pressure: " << pres << " hPa" << std::endl;
+                      << "Pressure: " << pres << " hPa, "
+                      << "Humidity: " << hum << " %RH" << std::endl;
             sleep(1);
         }
     }

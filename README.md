@@ -63,8 +63,8 @@ int main() {
     BME280 sensor(i2c, 0x76);
 
     if (sensor.begin()) {
-        float temperature, pressure;
-        sensor.readSensor(temperature, pressure);
+        float temperature, pressure, humidity;
+        sensor.readSensor(temperature, pressure, humidity);
     }
     return 0;
 }
@@ -81,8 +81,8 @@ int main() {
     BME280 sensor(spi);
 
     if (sensor.begin()) {
-        float temperature, pressure;
-        sensor.readSensor(temperature, pressure);
+        float temperature, pressure, humidity;
+        sensor.readSensor(temperature, pressure, humidity);
     }
     return 0;
 }

@@ -12,6 +12,10 @@ public:
     struct CalibrationData {
         uint16_t dig_T1; int16_t dig_T2, dig_T3;
         uint16_t dig_P1; int16_t dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
+        uint8_t dig_H1, dig_H3;
+        int16_t dig_H2;
+        int16_t dig_H4, dig_H5;
+        int8_t dig_H6;
     };
 
     BME280(II2CBus& bus, uint8_t addr = 0x76)
@@ -22,20 +26,29 @@ public:
 
     bool begin() {
         if (!readCalibrationData()) return false;
+        // Set humidity oversampling x1. Per datasheet, write ctrl_hum before ctrl_meas.
+        if (!busWrite(0xF2, 0x01)) return false;
         // Set oversampling: Temperature x1, Pressure x1, Mode: Normal
         if (!busWrite(0xF4, 0x27)) return false;
         return true;
     }
 
     void readSensor(float& temperature, float& pressure) {
-        uint8_t data[6];
-        busRead(0xF7, data, 6); // Burst read Pressure (3 bytes) and Temp (3 bytes)
+        float humidity;
+        readSensor(temperature, pressure, humidity);
+    }
+
+    void readSensor(float& temperature, float& pressure, float& humidity) {
+        uint8_t data[8];
+        busRead(0xF7, data, 8); // Burst read Pressure (3), Temp (3), Humidity (2)
 
         int32_t adc_P = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4);
         int32_t adc_T = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
+        int32_t adc_H = (data[6] << 8) | data[7];
 
         temperature = compensateTemperature(adc_T);
         pressure = compensatePressure(adc_P) / 100.0f; // Convert Pa to hPa
+        humidity = compensateHumidity(adc_H);
     }
 
 private:
@@ -46,11 +59,17 @@ private:
     uint8_t m_addr;
     Type m_type;
     CalibrationData m_calib;
-    int32_t m_tFine; // Used for pressure compensation [cite: 532]
+    int32_t m_tFine; // Used for pressure and humidity compensation.
 
     bool readCalibrationData() {
         uint8_t buf[24];
         if (!busRead(0x88, buf, 24)) return false;
+
+        uint8_t h1 = 0;
+        if (!busRead(0xA1, &h1, 1)) return false;
+
+        uint8_t hbuf[7];
+        if (!busRead(0xE1, hbuf, 7)) return false;
         
         m_calib.dig_T1 = (buf[1] << 8) | buf[0];
         m_calib.dig_T2 = (buf[3] << 8) | buf[2];
@@ -64,6 +83,13 @@ private:
         m_calib.dig_P7 = (buf[19] << 8) | buf[18];
         m_calib.dig_P8 = (buf[21] << 8) | buf[20];
         m_calib.dig_P9 = (buf[23] << 8) | buf[22];
+
+        m_calib.dig_H1 = h1;
+        m_calib.dig_H2 = (hbuf[1] << 8) | hbuf[0];
+        m_calib.dig_H3 = hbuf[2];
+        m_calib.dig_H4 = (int16_t)((hbuf[3] << 4) | (hbuf[4] & 0x0F));
+        m_calib.dig_H5 = (int16_t)((hbuf[5] << 4) | (hbuf[4] >> 4));
+        m_calib.dig_H6 = (int8_t)hbuf[6];
         return true;
     }
 
@@ -117,5 +143,21 @@ private:
         var2 = (((int64_t)m_calib.dig_P8) * p) >> 19;
         p = ((p + var1 + var2) >> 8) + (((int64_t)m_calib.dig_P7) << 4);
         return (float)p / 256.0f;
+    }
+
+    float compensateHumidity(int32_t adc_H) {
+        int32_t v_x1_u32r;
+        v_x1_u32r = m_tFine - 76800;
+        v_x1_u32r = (((((adc_H << 14) - (((int32_t)m_calib.dig_H4) << 20) - (((int32_t)m_calib.dig_H5) * v_x1_u32r)) + 16384) >> 15) *
+                     (((((((v_x1_u32r * ((int32_t)m_calib.dig_H6)) >> 10) * (((v_x1_u32r * ((int32_t)m_calib.dig_H3)) >> 11) + 32768)) >> 10) +
+                        2097152) *
+                           ((int32_t)m_calib.dig_H2) +
+                       8192) >>
+                      14));
+        v_x1_u32r = v_x1_u32r -
+                    (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) * ((int32_t)m_calib.dig_H1)) >> 4);
+        if (v_x1_u32r < 0) v_x1_u32r = 0;
+        if (v_x1_u32r > 419430400) v_x1_u32r = 419430400;
+        return (float)(v_x1_u32r >> 12) / 1024.0f;
     }
 };
