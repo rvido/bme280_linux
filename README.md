@@ -11,11 +11,13 @@ A high-performance, zero-allocation C++17 driver for the Bosch BME280 humidity, 
 
 ## Architecture
 
-The project follows the Dependency Inversion Principle: the `BME280` driver depends on the `II2CBus` interface rather than on concrete hardware implementations.
+The project follows the Dependency Inversion Principle: the `BME280` driver depends on the `II2CBus`/`ISPIBus` interface rather than on concrete hardware implementations.
 
 1. `include/II2CBus.hpp` — The abstract interface defining read/write operations.
-2. `include/BME280.hpp` — Core driver logic, register mapping, and compensation math.
-3. `src/LinuxI2CBus.cpp` — Linux-specific implementation using `/dev/i2c-x`.
+2. `include/ISPIBus.hpp` — The abstract interface defining transfer operation.
+3. `include/BME280.hpp` — Core driver logic, register mapping, and compensation math.
+4. `src/LinuxI2CBus.cpp` — Linux-specific implementation using `/dev/i2c-x`.
+5. `src/LinuxSPIBus.cpp` — Linux-specific implementation using `/dev/spidev-x.y`.
 
 ## Sensor Specifications
 
