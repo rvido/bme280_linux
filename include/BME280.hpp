@@ -33,11 +33,6 @@ public:
         return true;
     }
 
-    void readSensor(float& temperature, float& pressure) {
-        float humidity;
-        readSensor(temperature, pressure, humidity);
-    }
-
     void readSensor(float& temperature, float& pressure, float& humidity) {
         uint8_t data[8];
         busRead(0xF7, data, 8); // Burst read Pressure (3), Temp (3), Humidity (2)
@@ -46,9 +41,15 @@ public:
         int32_t adc_T = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
         int32_t adc_H = (data[6] << 8) | data[7];
 
-        temperature = compensateTemperature(adc_T);
-        pressure = compensatePressure(adc_P) / 100.0f; // Convert Pa to hPa
-        humidity = compensateHumidity(adc_H);
+        if (temperature) {
+            temperature = compensateTemperature(adc_T);
+        }
+        if (pressure) {
+            pressure = compensatePressure(adc_P) / 100.0f; // Convert Pa to hPa
+        }
+        if (humidity) {
+            humidity = compensateHumidity(adc_H);
+        }
     }
 
 private:
