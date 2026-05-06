@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # -----------------------------------------------------------------------------
-# 1. Driver Library
+# Driver Library
 # -----------------------------------------------------------------------------
 # This creates a header-only or static library for the driver itself.
 add_library(bme280_driver INTERFACE)
@@ -18,11 +18,11 @@ target_include_directories(bme280_driver INTERFACE
 )
 
 # -----------------------------------------------------------------------------
-# 2. Executable (Linux Implementation)
+# Executable (Linux Implementation)
 # -----------------------------------------------------------------------------
 # This compiles the Linux implementation and the main entry point.
-add_executable(bme280_example 
-    src/main.cpp 
+add_executable(bme280_example
+    src/main.cpp
     src/LinuxI2CBus.cpp
     src/LinuxSPIBus.cpp
 )
@@ -31,7 +31,7 @@ add_executable(bme280_example
 target_link_libraries(bme280_example PRIVATE bme280_driver)
 
 # -----------------------------------------------------------------------------
-# 3. Compiler Warnings (The "Senior" touch)
+# Compiler Warnings and Optimization
 # -----------------------------------------------------------------------------
 # Enabling high warning levels shows you care about code quality.
 if(MSVC)
@@ -39,3 +39,6 @@ if(MSVC)
 else()
     target_compile_options(bme280_example PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+# Stripping symbols in release builds can reduce binary size and improve performance.
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
