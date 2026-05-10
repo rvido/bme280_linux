@@ -42,3 +42,21 @@ endif()
 
 # Stripping symbols in release builds can reduce binary size and improve performance.
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+
+# -----------------------------------------------------------------------------
+# Tests
+# -----------------------------------------------------------------------------
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_executable(test_bme280
+        tests/test_bme280.cpp
+    )
+    target_link_libraries(test_bme280 PRIVATE bme280_driver)
+    if(MSVC)
+        target_compile_options(test_bme280 PRIVATE /W4 /WX)
+    else()
+        target_compile_options(test_bme280 PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    add_test(NAME bme280_test COMMAND test_bme280)
+endif()
