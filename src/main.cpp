@@ -4,9 +4,10 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <unistd.h>
 #include "BME280.hpp"
-#include "LinuxI2CBus.cpp"
-#include "LinuxSPIBus.cpp"
+#include "LinuxI2CBus.hpp"
+#include "LinuxSPIBus.hpp"
 
 int main(int argc, char** argv) {
     // Usage: ./app [i2c|spi]
@@ -23,10 +24,13 @@ int main(int argc, char** argv) {
             }
             while (true) {
                 float temp, pres, hum;
-                sensor.readSensor(temp, pres, hum);
-                std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
-                          << "Pressure: " << pres << " hPa, "
-                          << "Humidity: " << hum << " %RH" << std::endl;
+                if (sensor.readSensor(temp, pres, hum)) {
+                    std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
+                              << "Pressure: " << pres << " hPa, "
+                              << "Humidity: " << hum << " %RH" << std::endl;
+                } else {
+                    std::cerr << "Failed to read sensor data!" << std::endl;
+                }
                 sleep(1);
             }
         } catch (const std::exception& e) {
@@ -44,10 +48,13 @@ int main(int argc, char** argv) {
 
         while (true) {
             float temp, pres, hum;
-            sensor.readSensor(temp, pres, hum);
-            std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
-                      << "Pressure: " << pres << " hPa, "
-                      << "Humidity: " << hum << " %RH" << std::endl;
+            if (sensor.readSensor(temp, pres, hum)) {
+                std::cout << "Temp: " << std::fixed << std::setprecision(2) << temp << " °C, "
+                          << "Pressure: " << pres << " hPa, "
+                          << "Humidity: " << hum << " %RH" << std::endl;
+            } else {
+                std::cerr << "Failed to read sensor data!" << std::endl;
+            }
             sleep(1);
         }
     }

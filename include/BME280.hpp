@@ -18,6 +18,17 @@ public:
         int8_t dig_H6;
     };
 
+    // Register constants
+    static constexpr uint8_t REG_CALIB_T_P = 0x88;
+    static constexpr uint8_t REG_CALIB_H1 = 0xA1;
+    static constexpr uint8_t REG_CHIP_ID = 0xD0;
+    static constexpr uint8_t REG_CTRL_HUM = 0xF2;
+    static constexpr uint8_t REG_CTRL_MEAS = 0xF4;
+    static constexpr uint8_t REG_DATA = 0xF7;
+    static constexpr uint8_t REG_CALIB_H_PART2 = 0xE1;
+
+    static constexpr uint8_t CHIP_ID_VAL = 0x60;
+
     BME280(II2CBus& bus, uint8_t addr = 0x76)
         : m_i2c(&bus), m_spi(nullptr), m_addr(addr), m_type(Type::I2C) {}
 
@@ -25,17 +36,23 @@ public:
         : m_i2c(nullptr), m_spi(&spi), m_addr(0), m_type(Type::SPI) {}
 
     bool begin() {
+        uint8_t chip_id = 0;
+        if (!busRead(REG_CHIP_ID, &chip_id, 1) || chip_id != CHIP_ID_VAL) {
+            return false;
+        }
         if (!readCalibrationData()) return false;
         // Set humidity oversampling x1. Per datasheet, write ctrl_hum before ctrl_meas.
-        if (!busWrite(0xF2, 0x01)) return false;
+        if (!busWrite(REG_CTRL_HUM, 0x01)) return false;
         // Set oversampling: Temperature x1, Pressure x1, Mode: Normal
-        if (!busWrite(0xF4, 0x27)) return false;
+        if (!busWrite(REG_CTRL_MEAS, 0x27)) return false;
         return true;
     }
 
-    void readSensor(float& temperature, float& pressure, float& humidity) {
+    bool readSensor(float& temperature, float& pressure, float& humidity) {
         uint8_t data[8];
-        busRead(0xF7, data, 8); // Burst read Pressure (3), Temp (3), Humidity (2)
+        if (!busRead(REG_DATA, data, 8)) {
+            return false;
+        }
 
         int32_t adc_P = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4);
         int32_t adc_T = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4);
@@ -44,6 +61,7 @@ public:
         temperature = compensateTemperature(adc_T);
         pressure = compensatePressure(adc_P) / 100.0f; // Convert Pa to hPa
         humidity = compensateHumidity(adc_H);
+        return true;
     }
 
 private:
@@ -58,13 +76,13 @@ private:
 
     bool readCalibrationData() {
         uint8_t buf[24];
-        if (!busRead(0x88, buf, 24)) return false;
+        if (!busRead(REG_CALIB_T_P, buf, 24)) return false;
 
         uint8_t h1 = 0;
-        if (!busRead(0xA1, &h1, 1)) return false;
+        if (!busRead(REG_CALIB_H1, &h1, 1)) return false;
 
         uint8_t hbuf[7];
-        if (!busRead(0xE1, hbuf, 7)) return false;
+        if (!busRead(REG_CALIB_H_PART2, hbuf, 7)) return false;
         
         m_calib.dig_T1 = (buf[1] << 8) | buf[0];
         m_calib.dig_T2 = (buf[3] << 8) | buf[2];
