@@ -16,8 +16,8 @@ The project follows the Dependency Inversion Principle: the `BME280` driver depe
 1. `include/II2CBus.hpp` — The abstract interface defining read/write operations.
 2. `include/ISPIBus.hpp` — The abstract interface defining transfer operation.
 3. `include/BME280.hpp` — Core driver logic, register mapping, and compensation math.
-4. `src/LinuxI2CBus.cpp` — Linux-specific implementation using `/dev/i2c-x`.
-5. `src/LinuxSPIBus.cpp` — Linux-specific implementation using `/dev/spidev-x.y`.
+4. `src/LinuxI2CBus.hpp` & `src/LinuxI2CBus.cpp` — Linux-specific implementation using `/dev/i2c-x`.
+5. `src/LinuxSPIBus.hpp` & `src/LinuxSPIBus.cpp` — Linux-specific implementation using `/dev/spidev-x.y`.
 
 ## Sensor Specifications
 
@@ -27,8 +27,6 @@ The project follows the Dependency Inversion Principle: the `BME280` driver depe
 - **Interfaces:** I2C (up to 3.4 MHz) and SPI (up to 10 MHz)
 - **Typical current:** ~3.6 μA at 1 Hz
 
-## Build Instructions
-
 ## SPI Notes
 
 - **SPI Modes:** The BME280 supports SPI Mode 0 (CPOL=0, CPHA=0) and Mode 3 (CPOL=1, CPHA=1). Configure your host SPI controller accordingly before use.
@@ -36,6 +34,7 @@ The project follows the Dependency Inversion Principle: the `BME280` driver depe
 - **Register addressing (SPI):** SPI transactions use the 7-bit register address; the MSB (8th bit) is reserved for the R/W flag. In other words, to read register `0xF7` you must send the address byte `0xF7 | 0x80 = 0xF7` (read) or `0x77` for a write command with the R/W bit cleared — check your platform's SPI transfer ordering.
 - **3-wire vs 4-wire:** This driver assumes 4-wire SPI (separate MISO/MOSI). The BME280 also supports 3-wire SPI by enabling `spi3w_en` in the config register (`0xF5`) — enabling 3-wire requires additional host-side wiring and driver changes and is not implemented by this example.
 
+## Build Instructions
 
 This project uses modern CMake (target-based). To build:
 
@@ -61,12 +60,18 @@ make clean
 #include "LinuxI2CBus.hpp"
 
 int main() {
-    LinuxI2CBus i2c("/dev/i2c-1");
-    BME280 sensor(i2c, 0x76);
+    try {
+        LinuxI2CBus i2c("/dev/i2c-1");
+        BME280 sensor(i2c, 0x76);
 
-    if (sensor.begin()) {
-        float temperature, pressure, humidity;
-        sensor.readSensor(temperature, pressure, humidity);
+        if (sensor.begin()) {
+            float temperature, pressure, humidity;
+            if (sensor.readSensor(temperature, pressure, humidity)) {
+                // Use values...
+            }
+        }
+    } catch (const std::exception& e) {
+        // Handle open or ioctl error
     }
     return 0;
 }
@@ -79,12 +84,18 @@ int main() {
 #include "LinuxSPIBus.hpp"
 
 int main() {
-    LinuxSPIBus spi("/dev/spidev0.0");
-    BME280 sensor(spi);
+    try {
+        LinuxSPIBus spi("/dev/spidev0.0");
+        BME280 sensor(spi);
 
-    if (sensor.begin()) {
-        float temperature, pressure, humidity;
-        sensor.readSensor(temperature, pressure, humidity);
+        if (sensor.begin()) {
+            float temperature, pressure, humidity;
+            if (sensor.readSensor(temperature, pressure, humidity)) {
+                // Use values...
+            }
+        }
+    } catch (const std::exception& e) {
+        // Handle open or ioctl error
     }
     return 0;
 }
